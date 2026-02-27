@@ -5,9 +5,14 @@ from ranking_predicao import (
     prever_grupo_aluno
 )
 from sklearn.preprocessing import StandardScaler
+import os
+import uvicorn
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
 
 app = FastAPI()
-
 
 scaler = StandardScaler()
 
@@ -23,7 +28,6 @@ df_final, modelo_rf, kmeans = \
         cluster_metricas,
         metricas_normalizadas
     )
-
 
 
 @app.post("/prever")

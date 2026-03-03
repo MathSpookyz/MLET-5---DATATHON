@@ -1,4 +1,4 @@
-__pycache__
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -6,3 +6,8 @@ __pycache__
 venv
 .git
 .gitignore
+.pytest_cache/
+tests/
+notebook_modelo.ipynb
+PEDE_PASSOS_DATASET_FIAP copy.csv
+*.md

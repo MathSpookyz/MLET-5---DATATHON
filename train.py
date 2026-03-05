@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os  # ← NOVO
 
 from sklearn.preprocessing import StandardScaler
 
@@ -30,16 +31,23 @@ def main():
 
     logger.info("Starting training pipeline")
 
+    # Garantir que diretório de saída exista
+    os.makedirs(args.output, exist_ok=True)
+
     scaler = StandardScaler()
     df, cluster_metricas, metricas_normalizadas = obter_dados_e_preprocessar(
         args.csv, scaler
     )
 
     df, modelo_rf, kmeans = treinar_e_agrupar_alunos(
-        df, cluster_metricas, metricas_normalizadas
+        df,
+        cluster_metricas,
+        metricas_normalizadas,
+        metrics_path=os.path.join(args.output, "metrics.json"),
     )
 
     save_model(scaler, kmeans, modelo_rf, cluster_metricas, args.output)
+
     logger.info("Training pipeline complete")
 
 

@@ -45,3 +45,5 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Pede Passos - Prediction API", lifespan=lifespan)
     app.include_router(router)
     return app
+
+app = create_app()

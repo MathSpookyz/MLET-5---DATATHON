@@ -1,0 +1,86 @@
+name: Build and Deploy to Lightsail
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: andresnunes/pede-passos
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # --- BLOCO DO DOCKER HUB DESATIVADO ---
+      # Não precisamos mandar pro Docker Hub, a imagem vai direto do GitHub pra AWS.
+      # Se um dia quiser reativar, é só descomentar as 5 linhas abaixo e mudar o push para true.
+      # - name: Log in to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_IMAGE }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker Image Locally
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          # push: true  <-- COMENTADO (evita o erro 401 do Docker Hub)
+          push: false   # Deixa como false para ficar só na máquina virtual do GitHub
+          load: true    # OBRIGATÓRIO: Permite que a AWS pegue a imagem na etapa seguinte
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # --- BLOCO DO AWS LIGHTSAIL ---
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Install Lightsail Control Plugin & jq
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq curl
+          curl "https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl" -o "/usr/local/bin/lightsailctl"
+          sudo chmod +x /usr/local/bin/lightsailctl
+
+      - name: Deploy to Lightsail
+        run: |
+          aws lightsail push-container-image \
+            --service-name ${{ vars.SERVICE_NAME }} \
+            --label git-push-${{ github.sha }} \
+            --image ${{ env.DOCKER_IMAGE }}:latest \
+            --region us-east-1
+
+          sleep 5
+          IMAGE_TAG_AWS=$(aws lightsail get-container-images \
+            --service-name ${{ vars.SERVICE_NAME }} \
+            --region us-east-1 | jq -r '.containerImages[0].image')
+
+          aws lightsail create-container-service-deployment \
+            --service-name ${{ vars.SERVICE_NAME }} \
+            --containers "{\"${{ vars.SERVICE_NAME }}\": {\"image\": \"$IMAGE_TAG_AWS\", \"environment\": {\"NODE_ENV\": \"production\"}, \"ports\": {\"8000\": \"HTTP\"}}}" \
+            --public-endpoint "{\"containerName\": \"${{ vars.SERVICE_NAME }}\", \"containerPort\": 8000, \"healthCheck\": {\"path\": \"/health\", \"intervalSeconds\": 15}}"

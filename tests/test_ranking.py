@@ -1,8 +1,9 @@
+import json
 import numpy as np
 import pandas as pd
 import pytest
 
-from models.ranking import rankear_alunos_individual
+from models.ranking import rankear_alunos_individual, ultimos_alunos, primeiros_alunos
 
 
 @pytest.fixture
@@ -56,3 +57,83 @@ def test_score_is_mean_of_metrics(sample_df):
         expected.reset_index(drop=True),
         check_names=False,
     )
+
+
+# --- Fixtures for ultimos/primeiros ---
+
+@pytest.fixture
+def ranking_df():
+    """DataFrame with Probabilidade_PV, including NaN values."""
+    return pd.DataFrame({
+        "NOME": [f"Aluno_{i}" for i in range(15)],
+        "Probabilidade_PV": [0.1, 0.5, np.nan, 0.9, 0.3, 0.2, 0.8, 0.7, 0.4, 0.6, 0.05, 0.95, np.nan, 0.15, 0.85],
+    })
+
+
+# --- Tests for ultimos_alunos ---
+
+def test_ultimos_returns_correct_count(ranking_df):
+    result = ultimos_alunos(ranking_df, top_n=5)
+    assert len(result) == 5
+
+
+def test_ultimos_sorted_ascending(ranking_df):
+    result = ultimos_alunos(ranking_df, top_n=5)
+    probs = result["Probabilidade_PV"].dropna().tolist()
+    assert probs == sorted(probs)
+
+
+def test_ultimos_raises_without_column():
+    df = pd.DataFrame({"NOME": ["A", "B"]})
+    with pytest.raises(ValueError, match="Probabilidade_PV"):
+        ultimos_alunos(df)
+
+
+def test_ultimos_default_top(ranking_df):
+    result = ultimos_alunos(ranking_df)
+    assert len(result) == 10
+
+
+def test_ultimos_json_serializable(ranking_df):
+    """Ensure result with NaN can be serialized to JSON (the original bug)."""
+    result = ultimos_alunos(ranking_df, top_n=15)
+    records = json.loads(result.to_json(orient="records"))
+    assert isinstance(records, list)
+    # NaN should become None/null, not the string "NaN"
+    for rec in records:
+        for v in rec.values():
+            assert v != float("inf") and v != float("-inf")
+
+
+# --- Tests for primeiros_alunos ---
+
+def test_primeiros_returns_correct_count(ranking_df):
+    result = primeiros_alunos(ranking_df, top_n=5)
+    assert len(result) == 5
+
+
+def test_primeiros_sorted_descending(ranking_df):
+    result = primeiros_alunos(ranking_df, top_n=5)
+    probs = result["Probabilidade_PV"].dropna().tolist()
+    assert probs == sorted(probs, reverse=True)
+
+
+def test_primeiros_raises_without_column():
+    df = pd.DataFrame({"NOME": ["A", "B"]})
+    with pytest.raises(ValueError, match="Probabilidade_PV"):
+        primeiros_alunos(df)
+
+
+def test_primeiros_default_top(ranking_df):
+    result = primeiros_alunos(ranking_df)
+    assert len(result) == 10
+
+
+def test_primeiros_json_serializable(ranking_df):
+    """Ensure result with NaN can be serialized to JSON (the original bug)."""
+    result = primeiros_alunos(ranking_df, top_n=15)
+    records = json.loads(result.to_json(orient="records"))
+    assert isinstance(records, list)
+    for rec in records:
+        for v in rec.values():
+            assert v != float("inf") and v != float("-inf")

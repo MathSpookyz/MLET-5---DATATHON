@@ -40,6 +40,17 @@ def create_app() -> FastAPI:
         app.state.kmeans = kmeans
         app.state.modelo_rf = modelo_rf
         app.state.cluster_metricas = cluster_metricas
+
+        # Preprocess and store DataFrame for ranking endpoints
+        from models.prediction import prever_todos_alunos
+
+        scaler_temp = StandardScaler()
+        df_all, _, _ = obter_dados_e_preprocessar(CSV_PATH, scaler_temp)
+        app.state.df_preprocessed = prever_todos_alunos(
+            df_all, scaler, kmeans, modelo_rf, cluster_metricas
+        )
+        logger.info("Preprocessed DataFrame stored in app state")
+
         yield
 
     app = FastAPI(title="Pede Passos - Prediction API", lifespan=lifespan)

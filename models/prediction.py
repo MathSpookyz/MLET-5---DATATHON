@@ -24,3 +24,23 @@ def prever_grupo_aluno(novo_aluno_dados, scaler, kmeans, modelo_rf, cluster_metr
 
     logger.info("Prediction result: %s", resultado)
     return resultado
+
+def prever_todos_alunos(df, scaler, kmeans, modelo_rf, cluster_metricas):
+
+    logger.info("Predicting for all students")
+
+    df_result = df.copy()
+
+    aluno_normalizado = scaler.transform(df_result[cluster_metricas])
+
+    grupos = kmeans.predict(aluno_normalizado)
+
+    prob_pv = modelo_rf.predict_proba(df_result[cluster_metricas])[:, 1]
+
+    df_result["Grupo"] = grupos
+    df_result["Nivel"] = ["Nível " + str(g + 1) for g in grupos]
+    df_result["Probabilidade_PV"] = prob_pv
+
+    logger.info("Prediction for all students completed")
+
+    return df_result

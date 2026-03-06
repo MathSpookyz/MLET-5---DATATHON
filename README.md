@@ -18,8 +18,21 @@ main.py          Ponto de entrada da aplicacao (uvicorn)
 ### Modelos
 
 - **KMeans** (k=4) agrupa alunos em niveis de desempenho com base em 8 metricas normalizadas (INDE, IAA, IEG, IPS, IDA, IPP, IPV, IAN).
-- **RandomForestClassifier** (150 estimadores) prediz a probabilidade de um aluno atingir o Ponto de Virada.
+- **RandomForestClassifier** (300 estimadores, com SMOTE para balanceamento) prediz a probabilidade de um aluno atingir o Ponto de Virada.
 - Os artefatos do modelo sao persistidos com `joblib` e carregados na inicializacao da API, evitando retreinamento a cada reinicio.
+
+### Grupos e Niveis
+
+O KMeans gera 4 clusters. Cada cluster e mapeado para um nivel de desempenho com base na media do indicador `INDE_FINAL` (ordenado do menor para o maior):
+
+| Cluster (Grupo_ID) | Nivel Atribuido | Descricao |
+|---|---|---|
+| Cluster com menor INDE medio | **Nivel 1** | Desempenho critico — maior risco de nao atingir o Ponto de Virada |
+| Segundo menor INDE medio | **Nivel 2** | Desempenho abaixo da media — risco moderado-alto |
+| Terceiro menor INDE medio | **Nivel 3** | Desempenho acima da media — risco moderado-baixo |
+| Cluster com maior INDE medio | **Nivel 4** | Desempenho excelente — menor risco |
+
+> **Obs:** Os IDs numericos dos clusters (0–3) sao atribuidos arbitrariamente pelo KMeans. O mapeamento para niveis e feito em tempo de treinamento, ordenando os clusters pela media de `INDE_FINAL`.
 
 ## Configuracao
 

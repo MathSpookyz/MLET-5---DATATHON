@@ -16,3 +16,9 @@ class PredictionResponse(BaseModel):
     Grupo: int
     Nivel: str
     Probabilidade_PV: float
+
+class WorstStudent(BaseModel):
+    Grupo: int
+    student_id: int
+    Nivel: str
+    Probabilidade_PV: float

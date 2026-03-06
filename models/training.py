@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def treinar_e_agrupar_alunos(df, cluster_metricas, metricas_normalizadas):
-    kmeans = KMeans(n_clusters=4, random_state=42, n_init=20)
+    kmeans = KMeans(n_clusters=4, random_state=42, n_init=20, max_iter=500, tol=1e-4)
     df["Grupo_ID"] = kmeans.fit_predict(metricas_normalizadas)
     logger.info("KMeans fitted with 4 clusters")
 
@@ -35,7 +35,9 @@ def treinar_e_agrupar_alunos(df, cluster_metricas, metricas_normalizadas):
         metricas, alvo, test_size=0.2, random_state=42
     )
 
-    modelo_rf = RandomForestClassifier(n_estimators=150, random_state=42)
+    modelo_rf = RandomForestClassifier(
+        n_estimators=150, min_samples_leaf=4, max_features="sqrt", random_state=42
+    )
     modelo_rf.fit(X_train, y_train)
 
     accuracy = modelo_rf.score(X_test, y_test)

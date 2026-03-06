@@ -24,47 +24,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # --- BLOCO DO DOCKER HUB DESATIVADO ---
-      # Não precisamos de mandar para o Docker Hub, a imagem vai direto do GitHub para a AWS.
-      # Se um dia quiser reativar, é só descomentar as 5 linhas abaixo e mudar o push para true.
-      # - name: Log in to Docker Hub
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # --- BLOCO METADATA COMENTADO ---
-      # Comentámos este bloco para não gerar tags complexas, já que queremos 
-      # forçar a tag ':latest' mesmo estando na branch 'dev'.
-      # - name: Extract metadata
-      #   id: meta
-      #   uses: docker/metadata-action@v5
-      #   with:
-      #     images: ${{ env.DOCKER_IMAGE }}
-      #     tags: |
-      #       type=sha,prefix=
-      #       type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build Docker Image Locally
         uses: docker/build-push-action@v6
         with:
           context: .
-          # push: true  <-- COMENTADO (evita o erro 401 do Docker Hub)
-          push: false   # Deixa como false para ficar só na máquina virtual do GitHub
-          load: true    # OBRIGATÓRIO: Permite que a AWS pegue a imagem na etapa seguinte
-          
-          # --- TAGS ORIGINAIS COMENTADAS ---
-          # tags: ${{ steps.meta.outputs.tags }}
-          # labels: ${{ steps.meta.outputs.labels }}
-          
-          # --- NOVA TAG FORÇADA ---
-          # Força o nome da imagem a ser sempre ':latest', para que a AWS a encontre a seguir.
+          push: false
+          load: true
           tags: ${{ env.DOCKER_IMAGE }}:latest
-          
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # --- BLOCO DO AWS LIGHTSAIL ---
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
